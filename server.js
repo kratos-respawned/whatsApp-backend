@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const app = express();
 import Messages from "./dbMessage.js";
 import Pusher from "pusher";
+import cors from "cors";
 const port = process.env.PORT || 5274;
 const pusher = new Pusher({
   appId: "1444124",
@@ -26,7 +27,16 @@ db.once("open", () => {
   const msgCollection = db.collection("messagecontents");
   const changeStream = msgCollection.watch();
   changeStream.on("change", (change) => {
-    console.log(change);
+    console.log("a change occured");
+    if (change.operationType == "insert") {
+      const messageDetails = change.fullDocument;
+      pusher.trigger("message", "inserted", {
+        name: messageDetails.name,
+        message: messageDetails.message,
+      });
+    } else {
+      console.log("err");
+    }
   });
 });
 
@@ -37,6 +47,7 @@ app.get("/", (req, res) => {
 });
 //middleware
 app.use(express.json());
+app.use(cors());
 
 app.post("/messages/new", (req, res) => {
   const dbMessage = req.body;
